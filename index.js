@@ -1,6 +1,12 @@
 const express = require("express");
+const OpenAI = require("openai");
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // Middleware to parse JSON body
 app.use(express.json());
@@ -13,8 +19,56 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to generate journal entry using ChatGPT
+async function generateJournalWithChatGPT(conversationHistory, sessionSummary) {
+  try {
+    console.log("🤖 Generating journal entry with ChatGPT...");
+    
+    const prompt = `You are a thoughtful journal assistant. Based on the following voice conversation, create a personal journal entry that captures the key thoughts, emotions, and insights shared.
+
+${sessionSummary ? `Session Summary: ${sessionSummary}\n\n` : ''}
+
+Conversation:
+${conversationHistory}
+
+Please create a journal entry that:
+1. Captures the main themes and emotions
+2. Reflects on any insights or realizations
+3. Notes any goals or intentions mentioned
+4. Uses a personal, reflective tone
+5. Is structured and easy to read
+6. Includes a meaningful title
+
+Format the response as a proper journal entry with a title and date.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant that creates thoughtful, personal journal entries from voice conversations. Always maintain a respectful, empathetic tone and focus on the user's personal growth and reflection."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    });
+
+    const journalEntry = response.choices[0].message.content;
+    console.log("✅ Journal entry generated successfully");
+    return journalEntry;
+
+  } catch (error) {
+    console.error("❌ Error generating journal entry:", error);
+    throw new Error(`Journal generation failed: ${error.message}`);
+  }
+}
+
 // Updated webhook route for complete conversations
-app.post("/log-conversation", (req, res) => {
+app.post("/log-conversation", async (req, res) => {
   try {
     const { conversation_history, session_summary, timestamp, user_readiness } = req.body;
     
@@ -42,21 +96,37 @@ app.post("/log-conversation", (req, res) => {
       ready_for_journal: true
     };
     
-    // TODO: Here you can add ChatGPT integration or database storage
-    // Example: await generateJournalEntry(sessionData);
-    // Example: await saveToDatabase(sessionData);
+    // Generate journal entry with ChatGPT
+    let journalEntry = null;
+    try {
+      journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
+      console.log("📖 Journal entry created");
+    } catch (journalError) {
+      console.error("⚠️ Journal generation failed, but conversation logged:", journalError.message);
+    }
     
-    console.log("✅ Session data prepared for journal generation");
+    const responseData = {
+      ...sessionData,
+      journal_entry: journalEntry,
+      journal_generated: !!journalEntry
+    };
+    
+    // TODO: Save to database if needed
+    // await saveToDatabase(responseData);
+    
+    console.log("✅ Session processed successfully");
     
     res.status(200).json({ 
       status: "success", 
-      message: "Complete conversation logged successfully",
+      message: "Complete conversation processed successfully",
       session_info: {
         timestamp: sessionData.received_at,
         conversation_length: conversation_history ? conversation_history.length : 0,
         has_summary: !!session_summary,
+        journal_generated: !!journalEntry,
         ready_for_journal: true
-      }
+      },
+      journal_entry: journalEntry
     });
     
   } catch (error) {
@@ -70,7 +140,7 @@ app.post("/log-conversation", (req, res) => {
 });
 
 // Endpoint to manually trigger journal generation (for testing)
-app.post("/generate-journal", (req, res) => {
+app.post("/generate-journal", async (req, res) => {
   const { conversation_history, session_summary } = req.body;
   
   if (!conversation_history) {
@@ -80,19 +150,37 @@ app.post("/generate-journal", (req, res) => {
     });
   }
   
-  console.log("📖 Journal generation requested");
+  console.log("📖 Manual journal generation requested");
   
-  // TODO: Add ChatGPT integration here
-  // const journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
-  
+  try {
+    const journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
+    
+    res.json({
+      status: "success",
+      message: "Journal generated successfully",
+      data: {
+        conversation_length: conversation_history.length,
+        summary_provided: !!session_summary,
+        journal_entry: journalEntry
+      }
+    });
+  } catch (error) {
+    console.error("❌ Manual journal generation failed:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Journal generation failed",
+      error: error.message
+    });
+  }
+});
+
+// New endpoint to get journal entry by ID (for future database integration)
+app.get("/journal/:id", (req, res) => {
+  // TODO: Implement database lookup
   res.json({
-    status: "success",
-    message: "Journal generation initiated",
-    data: {
-      conversation_length: conversation_history.length,
-      summary_provided: !!session_summary,
-      // journal_entry: journalEntry // Uncomment when ChatGPT integration is added
-    }
+    status: "info",
+    message: "Database integration pending",
+    requested_id: req.params.id
   });
 });
 
@@ -102,9 +190,15 @@ app.get("/", (req, res) => {
     status: "WhisperLog Backend Running",
     service: "Voice Journaling API",
     timestamp: new Date().toISOString(),
+    features: {
+      voice_logging: "✅ Active",
+      chatgpt_integration: process.env.OPENAI_API_KEY ? "✅ Configured" : "❌ Missing API Key",
+      database: "⏳ Pending"
+    },
     endpoints: {
-      "POST /log-conversation": "Receive complete conversation from ElevenLabs",
+      "POST /log-conversation": "Receive complete conversation from ElevenLabs + Generate journal",
       "POST /generate-journal": "Manual journal generation",
+      "GET /journal/:id": "Retrieve journal entry by ID",
       "GET /": "Health check"
     }
   });
@@ -122,4 +216,5 @@ app.use((error, req, res, next) => {
 app.listen(port, () => {
   console.log(`✅ WhisperLog Backend listening on port ${port}`);
   console.log(`🎤 Ready to receive voice journal conversations`);
+  console.log(`🤖 ChatGPT integration: ${process.env.OPENAI_API_KEY ? '✅ Ready' : '❌ API key missing'}`);
 });
