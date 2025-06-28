@@ -1,12 +1,22 @@
 const express = require("express");
 const OpenAI = require("openai");
+const { createClient } = require("@supabase/supabase-js");
+
+// Supabase client setup
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// Express setup
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Initialize OpenAI
+// OpenAI client setup
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
 
 // Middleware to parse JSON body
 app.use(express.json());
@@ -111,7 +121,29 @@ app.post("/log-conversation", async (req, res) => {
       journal_generated: !!journalEntry
     };
     
-    // TODO: Save to database if needed
+    let sessionInsert;
+try {
+  const { data, error } = await supabase
+    .from("voice_sessions")
+    .insert({
+      timestamp,
+      conversation_history,
+      session_summary,
+      user_readiness
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("❌ Failed to insert into voice_sessions:", error);
+  } else {
+    sessionInsert = data;
+    console.log("✅ Session stored in Supabase:", sessionInsert.id);
+  }
+} catch (supabaseError) {
+  console.error("❌ Supabase error:", supabaseError.message);
+}
+
     // await saveToDatabase(responseData);
     
     console.log("✅ Session processed successfully");
@@ -154,6 +186,16 @@ app.post("/generate-journal", async (req, res) => {
   
   try {
     const journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
+    // Save journal to Supabase
+  if (journalEntry && sessionInsert?.id) {
+  await supabase.from("journal_entries").insert({
+  session_id: null, // no session ID available in manual case
+  journal: journalEntry
+});
+console.log("📥 Journal entry stored in Supabase (manual trigger)");
+}
+
+  
     
     res.json({
       status: "success",
