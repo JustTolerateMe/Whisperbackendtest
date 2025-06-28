@@ -188,11 +188,17 @@ app.post("/generate-journal", async (req, res) => {
     const journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
     // Save journal to Supabase
   if (journalEntry && sessionInsert?.id) {
-  await supabase.from("journal_entries").insert({
-  session_id: null, // no session ID available in manual case
-  journal: journalEntry
-});
-console.log("📥 Journal entry stored in Supabase (manual trigger)");
+  try {
+    await supabase.from("journal_entries").insert({
+      session_id: sessionInsert.id,
+      journal: journalEntry
+    });
+    console.log("📥 Journal entry stored in Supabase");
+  } catch (insertError) {
+    console.error("❌ Failed to insert journal entry:", insertError.message);
+  }
+}
+
 }
 
   
