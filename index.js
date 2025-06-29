@@ -199,7 +199,6 @@ app.post("/generate-journal", async (req, res) => {
   }
 }
 
-}
 
   
     
