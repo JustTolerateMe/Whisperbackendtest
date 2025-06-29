@@ -41,29 +41,29 @@ ${conversationHistory}
 Session Summary (if available):
 ${sessionSummary ? sessionSummary : "No summary provided."}
 
-# Instructions
 The diary entry must:
-1. Be written fully in the first person, as if the user is writing it themselves.
-2. Use a natural, sincere, and deeply personal tone — simple, human, and gentle.
-3. Clearly describe what the user talked about and how their day went, including any main topics (like work, projects, personal feelings).
-4. Explicitly express the emotions they felt during or after reflecting on the day.
-5. Match the depth, length, and emotional energy of what the user shared:
+1. Be written entirely in the first person, as if the user is writing it themselves.
+2. Use a natural, sincere, personal tone — simple, human, and straightforward.
+3. Only include details, feelings, and topics the user explicitly shared. Do not invent or exaggerate emotions or thoughts.
+4. Match the depth, length, and emotional energy of what the user shared:
    - If the user shared briefly, write a short, light entry.
-   - If the user shared in detail, write a longer, more reflective entry.
-6. Include small sensory or mood details if possible (e.g., how their body felt, the vibe of the room, small fleeting thoughts).
-7. Use natural first-person expressions (like "I guess," "honestly," "it feels like") to make it sound real and intimate.
-8. End with a short, soft, self-compassionate or encouraging thought, in the user's voice.
-9. Include a simple title and today’s date at the top.
+   - If they shared in detail, write a longer, more reflective entry.
+5. Use clear, everyday language rather than metaphoric or poetic expressions.
+6. Avoid adding extra emotions, interpretations, or metaphors that the user did not express.
+7. If appropriate, lightly echo small phrases the user used, to feel personal, but do not overuse.
+8. It is acceptable to mention if there isn’t much to write, and normalize that as okay.
+9. Optionally include a gentle closing thought, if it feels natural and based on the user's actual words.
+10. Include a simple, personal title and today’s date at the top.
 
 # Style
-- Avoid overly poetic, flowery, or Shakespearean language.
+- Avoid poetic, flowery, or Shakespearean language.
 - Avoid robotic or clinical phrasing; write as a real human would write a private diary.
 - Do not mention Whisper or the assistant.
-- Do not summarize the conversation directly; capture the feelings and personal perspective instead.
-- Keep it warm, safe, and gentle, but grounded and authentic.
+- Do not summarize the entire conversation; focus on what the user actually shared, from their perspective.
+- Keep it warm and grounded, but do not insert extra emotion or narrative.
 
 # Fail-Safe Note
-Always follow these instructions exactly. If there is any ambiguity, prioritize clarity, emotional authenticity, and matching the user's voice and depth.
+Always follow these instructions exactly. If there is any ambiguity, prioritize staying strictly true to the user’s actual words and emotional sharing. Never add content the user did not express.
 
 # Output
 Generate only the diary entry text as the final output, with no extra system notes or explanations.`;
