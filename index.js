@@ -107,21 +107,21 @@ app.post("/log-conversation", async (req, res) => {
     };
     
     // Generate journal entry with ChatGPT
-    let journalEntry = null;
-    try {
-      journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
-      console.log("📖 Journal entry created");
-    } catch (journalError) {
-      console.error("⚠️ Journal generation failed, but conversation logged:", journalError.message);
-    }
-    
-    const responseData = {
-      ...sessionData,
-      journal_entry: journalEntry,
-      journal_generated: !!journalEntry
-    };
-    
-    let sessionInsert;
+ let journalEntry = null;
+try {
+  journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
+  console.log("📖 Journal entry created");
+} catch (journalError) {
+  console.error("⚠️ Journal generation failed, but conversation logged:", journalError.message);
+}
+
+const responseData = {
+  ...sessionData,
+  journal_entry: journalEntry,
+  journal_generated: !!journalEntry
+};
+
+let sessionInsert;
 try {
   const { data, error } = await supabase
     .from("voice_sessions")
@@ -140,9 +140,24 @@ try {
     sessionInsert = data;
     console.log("✅ Session stored in Supabase:", sessionInsert.id);
   }
+  
+  // ✅ Automatically store the journal entry
+  if (journalEntry && sessionInsert?.id) {
+    try {
+      await supabase.from("journal_entries").insert({
+        session_id: sessionInsert.id,
+        journal: journalEntry
+      });
+      console.log("📥 Journal entry stored in Supabase");
+    } catch (insertError) {
+      console.error("❌ Failed to insert journal entry:", insertError.message);
+    }
+  }
+
 } catch (supabaseError) {
   console.error("❌ Supabase error:", supabaseError.message);
 }
+
 
     // await saveToDatabase(responseData);
     
@@ -173,35 +188,34 @@ try {
 
 // Endpoint to manually trigger journal generation (for testing)
 app.post("/generate-journal", async (req, res) => {
-  const { conversation_history, session_summary } = req.body;
-  
+  const { conversation_history, session_summary, session_id } = req.body;
+
   if (!conversation_history) {
     return res.status(400).json({
       status: "error",
       message: "conversation_history is required"
     });
   }
-  
+
   console.log("📖 Manual journal generation requested");
-  
+
   try {
     const journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
-    // Save journal to Supabase
-  if (journalEntry && sessionInsert?.id) {
-  try {
-    await supabase.from("journal_entries").insert({
-      session_id: sessionInsert.id,
-      journal: journalEntry
-    });
-    console.log("📥 Journal entry stored in Supabase");
-  } catch (insertError) {
-    console.error("❌ Failed to insert journal entry:", insertError.message);
-  }
-}
 
+    if (!session_id) {
+      console.warn("⚠️ No session_id provided, skipping Supabase journal insertion.");
+    } else {
+      try {
+        await supabase.from("journal_entries").insert({
+          session_id,
+          journal: journalEntry
+        });
+        console.log("📥 Journal entry stored in Supabase");
+      } catch (insertError) {
+        console.error("❌ Failed to insert journal entry:", insertError.message);
+      }
+    }
 
-  
-    
     res.json({
       status: "success",
       message: "Journal generated successfully",
@@ -220,6 +234,7 @@ app.post("/generate-journal", async (req, res) => {
     });
   }
 });
+
 
 // New endpoint to get journal entry by ID (for future database integration)
 app.get("/journal/:id", (req, res) => {
