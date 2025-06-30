@@ -51,7 +51,7 @@ The diary entry must:
 5. Use clear, everyday language rather than metaphoric or poetic expressions.
 6. Avoid adding extra emotions, interpretations, or metaphors that the user did not express.
 7. It is acceptable to mention if there isn’t much to write, and normalize that as okay.
-8. Include a simple, personal title and today’s date at the top.
+8. Include a simple, personal title at the top.
 
 # Style
 - Avoid poetic, flowery, or Shakespearean language.
