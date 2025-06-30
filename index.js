@@ -106,10 +106,17 @@ app.post("/log-conversation", async (req, res) => {
 
   let journalEntry = null;
   try {
-    journalEntry = await generateJournalWithChatGPT(
-      conversation_history,
-      session_summary
-    );
+   journalEntry = await generateJournalWithChatGPT(conversation_history, session_summary);
+
+// Ensure there's exactly one blank line after the title line
+if (journalEntry) {
+  const lines = journalEntry.split("\n");
+  if (lines.length >= 2 && lines[1].trim() !== "") {
+    lines.splice(1, 0, ""); // insert blank line after title
+    journalEntry = lines.join("\n");
+  }
+}
+
   } catch (error) {
     console.error("⚠️ Journal generation failed:", error.message);
   }
