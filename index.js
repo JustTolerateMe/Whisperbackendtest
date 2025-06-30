@@ -80,7 +80,7 @@ Generate only the diary entry text as the final output, with no extra system not
       }
     ],
     max_tokens: 1000,
-    temperature: 0.7
+    temperature: 0.6
   });
 
   return response.choices[0].message.content;
