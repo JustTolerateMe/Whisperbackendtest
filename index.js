@@ -134,12 +134,31 @@ app.post("/log-conversation", async (req, res) => {
     }
 
     if (journalEntry) {
-      const { error: insertError } = await supabase
-        .from("journal_entries")
-        .insert({
-          conversation_id,
-          journal: journalEntry
-        });
+  const { data: existing, error: fetchError } = await supabase
+    .from("journal_entries")
+    .select("id")
+    .eq("conversation_id", conversation_id)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("❌ Error checking journal existence:", fetchError);
+  } else if (!existing) {
+    const { error: insertError } = await supabase
+      .from("journal_entries")
+      .insert({
+        conversation_id,
+        journal: journalEntry
+      });
+    if (insertError) {
+      console.error("❌ Insert error:", insertError);
+    } else {
+      console.log("📥 Journal stored.");
+    }
+  } else {
+    console.log("⚠️ Journal for this conversation_id already exists. Skipping insert.");
+  }
+}
+
 
       if (insertError) {
         console.error("❌ Failed to insert journal entry:", insertError);
