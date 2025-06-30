@@ -165,7 +165,7 @@ app.post("/log-conversation", async (req, res) => {
       } else {
         console.log("📥 Journal entry stored in Supabase");
       }
-    }
+    
 
     res.status(200).json({
       status: "success",
